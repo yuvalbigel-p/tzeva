@@ -140,9 +140,9 @@ describe('segment snapping', () => {
 describe('undefined hue', () => {
   it('keeps the previous hue for grays', () => {
     const prev = { h: 200, s: 0.5, b: 0.5 }
-    expect(hexToHsbKeepHue('#808080', prev).h).toBe(200)
-    expect(hexToHsbKeepHue('#000000', prev).h).toBe(200)
-    expect(hexToHsbKeepHue('#FF0000', prev).h).toBe(0)
+    expect(hexToHsbKeepHue('#808080', prev)?.h).toBe(200)
+    expect(hexToHsbKeepHue('#000000', prev)?.h).toBe(200)
+    expect(hexToHsbKeepHue('#FF0000', prev)?.h).toBe(0)
   })
   it('returns null for invalid hex', () => {
     expect(hexToHsbKeepHue('nope', { h: 1, s: 1, b: 1 })).toBeNull()
