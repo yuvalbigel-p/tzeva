@@ -15,16 +15,24 @@ type RowsProps = {
   b: number
   onCopy: (hex: string) => void
   onSelect: (index: number) => void
+  onAdd: (hex: string) => void
 }
 
 /** One row per harmony color, styled like the main swatch row. */
-export function HarmonyRows({ hues, s, b, onCopy, onSelect }: RowsProps) {
+export function HarmonyRows({ hues, s, b, onCopy, onSelect, onAdd }: RowsProps) {
   return (
     <div className="harmony-rows">
       {hues.map((hue, i) => {
         const hex = hsbToHex(hue, s, b)
         return (
-          <ColorRow key={i} color={hex} hex={hex} onCopy={onCopy} onSwatchLongPress={() => onSelect(i)}>
+          <ColorRow
+            key={i}
+            color={hex}
+            hex={hex}
+            onCopy={onCopy}
+            onSwatchLongPress={() => onSelect(i)}
+            onAdd={() => onAdd(hex)}
+          >
             <span className="hex-text">{hex}</span>
           </ColorRow>
         )

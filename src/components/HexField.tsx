@@ -6,12 +6,13 @@ type Props = {
   /** Returns false if the text is not a valid hex color (state is left unchanged). */
   onApply: (text: string) => boolean
   onCopy: (hex: string) => void
+  onAdd: (hex: string) => void
 }
 
 type Draft = { text: string; base: string; error: boolean }
 
 /** Selected color's swatch row: editable hex with validation and a copy icon. */
-export function HexField({ hex, onApply, onCopy }: Props) {
+export function HexField({ hex, onApply, onCopy, onAdd }: Props) {
   // A draft belongs to the hex it was typed against; once the color changes elsewhere it is ignored.
   const [draft, setDraft] = useState<Draft | null>(null)
   const active = draft && draft.base === hex ? draft : null
@@ -23,7 +24,7 @@ export function HexField({ hex, onApply, onCopy }: Props) {
   }
 
   return (
-    <ColorRow color={hex} hex={hex} onCopy={onCopy}>
+    <ColorRow color={hex} hex={hex} onCopy={onCopy} onAdd={() => onAdd(hex)}>
       <input
         className="hex-input"
         value={active ? active.text : hex}

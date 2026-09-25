@@ -1,5 +1,5 @@
 import { useRef, type PointerEvent, type ReactNode } from 'react'
-import { CopyIcon } from './icons'
+import { CopyIcon, PlusIcon, TrashIcon } from './icons'
 
 const LONG_PRESS_MS = 450
 const MOVE_TOLERANCE = 8
@@ -12,10 +12,14 @@ type Props = {
   onCopy: (hex: string) => void
   /** Long-pressing the swatch selects this color (harmony rows only). */
   onSwatchLongPress?: () => void
+  /** Shows an Add to palette (+) button after the field (main page rows). */
+  onAdd?: () => void
+  /** Shows a delete button after the field (palette rows). */
+  onDelete?: () => void
 }
 
-/** Swatch + hex field with a copy icon at its end. Shared by the main row and harmony rows. */
-export function ColorRow({ color, children, hex, onCopy, onSwatchLongPress }: Props) {
+/** Swatch + hex field with a copy icon at its end. Shared by the main row, harmony rows and palette rows. */
+export function ColorRow({ color, children, hex, onCopy, onSwatchLongPress, onAdd, onDelete }: Props) {
   const timer = useRef(0)
   const start = useRef({ x: 0, y: 0 })
 
@@ -47,6 +51,16 @@ export function ColorRow({ color, children, hex, onCopy, onSwatchLongPress }: Pr
           <CopyIcon />
         </button>
       </div>
+      {onAdd && (
+        <button type="button" className="icon-btn row-action" aria-label={`Add ${hex} to palette`} onClick={onAdd}>
+          <PlusIcon />
+        </button>
+      )}
+      {onDelete && (
+        <button type="button" className="icon-btn row-action" aria-label={`Delete ${hex}`} onClick={onDelete}>
+          <TrashIcon />
+        </button>
+      )}
     </div>
   )
 }

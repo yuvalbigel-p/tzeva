@@ -345,3 +345,52 @@ input[type='range']::-moz-range-thumb {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
+
+/* Palette */
+.row-action {
+  margin: 0 -6px;
+}
+.palette-btn {
+  position: absolute;
+  z-index: 5;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 8px;
+}
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #f2f2f2;
+  color: #111;
+  font: 700 11px/18px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  text-align: center;
+}
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -8px;
+}
+.page-header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.palette-empty {
+  margin: 24px 0 0;
+  color: var(--muted);
+  text-align: center;
+}
