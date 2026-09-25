@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import { harmonies, hexToHsbKeepHue, hsbToHex } from './color'
 import { copyText } from './copy'
 import { INITIAL_STATE, type State } from './state'
@@ -17,6 +18,10 @@ export default function App() {
   const [view, setView] = useState<View>('sliders')
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef(0)
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW()
 
   const hex = hsbToHex(st.h, st.s, st.b)
   const hues = harmonies(st.h, st.harmony, st.wheel)
@@ -87,6 +92,12 @@ export default function App() {
           ]}
         />
       </footer>
+
+      {needRefresh && (
+        <button type="button" className="update-banner" onClick={() => updateServiceWorker(true)}>
+          Update available, tap to reload
+        </button>
+      )}
 
       {toast && (
         <div className="toast" role="status">
