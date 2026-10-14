@@ -13,6 +13,17 @@ npm test        # unit tests for src/color.ts
 npm run build
 ```
 
+## Regenerate the app icon
+
+```
+node scripts/gen-icons.mjs
+```
+
+Composes `assets/icon.svg` / `assets/icon-maskable.svg` (the gradient wheel, rendered by
+the app's own `drawWheel()` in headless Chrome, plus "Tzeva" converted to vector paths)
+and rasterizes them to the PNGs in `public/`. Needs a local Chrome/Chromium install
+(set `CHROME_PATH` to its executable if it's not auto-detected).
+
 ## Install on iPhone
 
 Open the site in Safari, tap Share, then Add to Home Screen.
