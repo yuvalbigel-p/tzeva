@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent, type ReactNode } from 'react'
+import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { CopyIcon, PlusIcon, TrashIcon } from './icons'
 
 const LONG_PRESS_MS = 450
@@ -16,10 +16,24 @@ type Props = {
   onAdd?: () => void
   /** Shows a delete button after the field (palette rows). */
   onDelete?: () => void
+  /** Tapping anywhere on the row selects this color (palette rows). */
+  onSelect?: () => void
+  /** Highlights the row as the currently selected color (palette rows). */
+  selected?: boolean
 }
 
 /** Swatch + hex field with a copy icon at its end. Shared by the main row, harmony rows and palette rows. */
-export function ColorRow({ color, children, hex, onCopy, onSwatchLongPress, onAdd, onDelete }: Props) {
+export function ColorRow({
+  color,
+  children,
+  hex,
+  onCopy,
+  onSwatchLongPress,
+  onAdd,
+  onDelete,
+  onSelect,
+  selected,
+}: Props) {
   const timer = useRef(0)
   const start = useRef({ x: 0, y: 0 })
 
@@ -32,9 +46,17 @@ export function ColorRow({ color, children, hex, onCopy, onSwatchLongPress, onAd
   const move = (e: PointerEvent) => {
     if (Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > MOVE_TOLERANCE) cancel()
   }
+  // Row actions select too (bubbling to onSelect) unless they stop it here.
+  const stop = (fn: () => void) => (e: MouseEvent) => {
+    e.stopPropagation()
+    fn()
+  }
 
   return (
-    <div className="color-row">
+    <div
+      className={`color-row${onSelect ? ' selectable' : ''}${selected ? ' selected' : ''}`}
+      onClick={onSelect}
+    >
       <div
         className={`swatch${onSwatchLongPress ? ' pressable' : ''}`}
         style={{ background: color }}
@@ -47,17 +69,17 @@ export function ColorRow({ color, children, hex, onCopy, onSwatchLongPress, onAd
       />
       <div className="hex-field">
         {children}
-        <button type="button" className="icon-btn" aria-label={`Copy ${hex}`} onClick={() => onCopy(hex)}>
+        <button type="button" className="icon-btn" aria-label={`Copy ${hex}`} onClick={stop(() => onCopy(hex))}>
           <CopyIcon />
         </button>
       </div>
       {onAdd && (
-        <button type="button" className="icon-btn row-action" aria-label={`Add ${hex} to palette`} onClick={onAdd}>
+        <button type="button" className="icon-btn row-action" aria-label={`Add ${hex} to palette`} onClick={stop(onAdd)}>
           <PlusIcon />
         </button>
       )}
       {onDelete && (
-        <button type="button" className="icon-btn row-action" aria-label={`Delete ${hex}`} onClick={onDelete}>
+        <button type="button" className="icon-btn row-action" aria-label={`Delete ${hex}`} onClick={stop(onDelete)}>
           <TrashIcon />
         </button>
       )}

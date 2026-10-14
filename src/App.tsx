@@ -1,26 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { harmonies, hexToHsbKeepHue, hsbToHex } from './color'
+import { harmonies, hexToHsbKeepHue, hsbToHex, parseHex, rgbToHsb } from './color'
 import { copyText } from './copy'
 import { INITIAL_STATE, type State } from './state'
 import { ColorWheel } from './components/ColorWheel'
 import { HarmonyPicker, HarmonyRows } from './components/HarmonyPanel'
 import { HexField } from './components/HexField'
 import { HsbSliders } from './components/HsbSliders'
-import { PaletteIcon } from './components/icons'
-import { PalettePage } from './components/PalettePage'
+import { PaletteTab } from './components/PaletteTab'
 import { Segmented } from './components/Segmented'
 import { SettingsPopover } from './components/SettingsPopover'
-import { WheelMarker } from './components/WheelMarker'
+import { WheelMarker, type WheelDot } from './components/WheelMarker'
 
-type View = 'sliders' | 'harmonies'
-type Page = 'main' | 'palette'
+type View = 'sliders' | 'harmonies' | 'palette'
 
 export default function App() {
   const [st, setSt] = useState<State>(INITIAL_STATE)
   const [view, setView] = useState<View>('sliders')
-  const [page, setPage] = useState<Page>('main')
-  // Session only: never persisted, so a reload starts with an empty palette.
+  // Session only for now: Part 2 makes this persist across reloads.
   const [palette, setPalette] = useState<string[]>([])
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef(0)
@@ -55,6 +52,12 @@ export default function App() {
     return true
   }
 
+  // Selects a known-good hex (a palette color, or a harmony/dot's own color) as the current color.
+  const selectHex = (hexValue: string) => {
+    const next = hexToHsbKeepHue(hexValue, st)
+    if (next) patch(next)
+  }
+
   const addToPalette = (h: string) => {
     if (palette.includes(h)) {
       showToast('Already in palette')
@@ -64,48 +67,27 @@ export default function App() {
     showToast('Added to palette')
   }
 
-  const overlays = (
-    <>
-      {needRefresh && (
-        <button type="button" className="update-banner" onClick={() => updateServiceWorker(true)}>
-          Update available, tap to reload
-        </button>
-      )}
+  const harmonyDots: WheelDot[] = hues.map((hue, i) => ({
+    key: i,
+    h: hue,
+    s: st.s,
+    hex: hsbToHex(hue, st.s, st.b),
+  }))
+  const paletteDots: WheelDot[] = palette.flatMap((c) => {
+    const rgb = parseHex(c)
+    if (!rgb) return []
+    const hsb = rgbToHsb(rgb.r, rgb.g, rgb.b)
+    return [{ key: c, h: hsb.h, s: hsb.s, hex: c, selected: c === hex }]
+  })
+  const dots = view === 'harmonies' ? harmonyDots : view === 'palette' ? paletteDots : null
 
-      {toast && (
-        <div className="toast" role="status">
-          {toast}
-        </div>
-      )}
-    </>
-  )
-
-  if (page === 'palette') {
-    return (
-      <div className="app">
-        <PalettePage
-          colors={palette}
-          onBack={() => setPage('main')}
-          onCopy={copy}
-          onDelete={(h) => setPalette(palette.filter((c) => c !== h))}
-        />
-        {overlays}
-      </div>
-    )
+  const onPickDot = (key: string | number) => {
+    if (view === 'harmonies') patch({ h: hues[key as number] })
+    else if (view === 'palette') selectHex(key as string)
   }
 
   return (
     <div className="app">
-      <button
-        type="button"
-        className="icon-btn palette-btn"
-        aria-label={`Palette, ${palette.length} ${palette.length === 1 ? 'color' : 'colors'}`}
-        onClick={() => setPage('palette')}
-      >
-        <PaletteIcon />
-        {palette.length > 0 && <span className="badge">{palette.length}</span>}
-      </button>
-
       <SettingsPopover
         mode={st.mode}
         wheel={st.wheel}
@@ -115,20 +97,14 @@ export default function App() {
 
       <div className="wheel-wrap">
         <ColorWheel b={st.b} mode={st.mode} wheel={st.wheel} />
-        <WheelMarker
-          state={st}
-          dots={view === 'harmonies' ? hues : null}
-          onChange={(h, s) => patch({ h, s })}
-          onPickDot={(i) => patch({ h: hues[i] })}
-        />
+        <WheelMarker state={st} dots={dots} onChange={(h, s) => patch({ h, s })} onPickDot={onPickDot} />
       </div>
 
       <HexField hex={hex} onApply={applyHex} onCopy={copy} onAdd={addToPalette} />
 
       <main className="view">
-        {view === 'sliders' ? (
-          <HsbSliders h={st.h} s={st.s} b={st.b} onChange={patch} />
-        ) : (
+        {view === 'sliders' && <HsbSliders h={st.h} s={st.s} b={st.b} onChange={patch} />}
+        {view === 'harmonies' && (
           <HarmonyRows
             hues={hues}
             s={st.s}
@@ -136,6 +112,15 @@ export default function App() {
             onCopy={copy}
             onSelect={(i) => patch({ h: hues[i] })}
             onAdd={addToPalette}
+          />
+        )}
+        {view === 'palette' && (
+          <PaletteTab
+            colors={palette}
+            selectedHex={hex}
+            onCopy={copy}
+            onDelete={(c) => setPalette(palette.filter((x) => x !== c))}
+            onSelect={selectHex}
           />
         )}
       </main>
@@ -151,11 +136,22 @@ export default function App() {
           options={[
             { value: 'sliders', label: 'Sliders' },
             { value: 'harmonies', label: 'Harmonies' },
+            { value: 'palette', label: 'Palette' },
           ]}
         />
       </footer>
 
-      {overlays}
+      {needRefresh && (
+        <button type="button" className="update-banner" onClick={() => updateServiceWorker(true)}>
+          Update available, tap to reload
+        </button>
+      )}
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

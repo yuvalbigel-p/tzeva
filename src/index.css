@@ -78,7 +78,7 @@ input {
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
-.harmony-dot {
+.wheel-dot {
   position: absolute;
   width: 44px;
   height: 44px;
@@ -88,7 +88,7 @@ input {
   transform: translate(-50%, -50%);
   cursor: pointer;
 }
-.harmony-dot::after {
+.wheel-dot::after {
   content: '';
   position: absolute;
   inset: 15px;
@@ -96,6 +96,9 @@ input {
   border: 2px solid #fff;
   background: var(--dot);
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55);
+}
+.wheel-dot.selected::after {
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(255, 255, 255, 0.4);
 }
 .bubble {
   position: absolute;
@@ -218,6 +221,8 @@ input {
 .view {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .harmony-rows {
   display: flex;
@@ -350,35 +355,14 @@ input[type='range']::-moz-range-thumb {
 .row-action {
   margin: 0 -6px;
 }
-.palette-btn {
-  position: absolute;
-  z-index: 5;
-  top: calc(env(safe-area-inset-top, 0px) + 6px);
-  left: 8px;
+.color-row.selectable {
+  cursor: pointer;
 }
-.badge {
-  position: absolute;
-  top: 4px;
-  right: 2px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #f2f2f2;
-  color: #111;
-  font: 700 11px/18px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  text-align: center;
+.color-row.selected .swatch {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
 }
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: -8px;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+.color-row.selected .hex-field {
+  box-shadow: 0 0 0 2px var(--text);
 }
 .palette-list {
   flex: 1;

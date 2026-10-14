@@ -7,19 +7,29 @@ import {
   snapAngle,
   snapSat,
 } from '../color'
+import { spreadOverlaps } from '../dotLayout'
 import type { State } from '../state'
 
 const UNIT_CENTER = { x: 0.5, y: 0.5 }
 
-type Props = {
-  state: State
-  /** Harmony hues to show as dots, or null when the Harmonies view is closed. */
-  dots: number[] | null
-  onChange: (h: number, s: number) => void
-  onPickDot: (index: number) => void
+/** A dot shown on the wheel: its own hue/saturation (for position) and actual color (for its fill). */
+export type WheelDot = {
+  key: string | number
+  h: number
+  s: number
+  hex: string
+  selected?: boolean
 }
 
-/** Marker, harmony dots and pointer handling, overlaid on the canvas. */
+type Props = {
+  state: State
+  /** Dots to show (harmony hues or palette colors), or null when neither view is open. */
+  dots: WheelDot[] | null
+  onChange: (h: number, s: number) => void
+  onPickDot: (key: string | number) => void
+}
+
+/** Marker, harmony/palette dots and pointer handling, overlaid on the canvas. */
 export function WheelMarker({ state, dots, onChange, onPickDot }: Props) {
   const { h, s, b, mode, wheel } = state
   const ref = useRef<HTMLDivElement>(null)
@@ -50,14 +60,15 @@ export function WheelMarker({ state, dots, onChange, onPickDot }: Props) {
   }
   const onUp = () => setDragging(false)
 
-  const pos = (hue: number, sat: number) => {
-    const p = hsToPoint(hue, sat, UNIT_CENTER, 0.5, wheel)
-    return { left: `${p.x * 100}%`, top: `${p.y * 100}%` }
-  }
+  const pos = (hue: number, sat: number) => hsToPoint(hue, sat, UNIT_CENTER, 0.5, wheel)
+  const style = (p: { x: number; y: number }) => ({ left: `${p.x * 100}%`, top: `${p.y * 100}%` })
 
   const marker = pos(h, s)
   const hex = hsbToHex(h, s, b)
-  const bubbleBelow = hsToPoint(h, s, UNIT_CENTER, 0.5, wheel).y < 0.18
+  const bubbleBelow = marker.y < 0.18
+
+  const dotPoints = (dots ?? []).map((d) => ({ ...pos(d.h, d.s), data: d }))
+  const spread = spreadOverlaps(dotPoints)
 
   return (
     <div
@@ -68,20 +79,20 @@ export function WheelMarker({ state, dots, onChange, onPickDot }: Props) {
       onPointerUp={onUp}
       onPointerCancel={onUp}
     >
-      {dots?.map((dh, i) => (
+      {spread.map(({ x, y, data }) => (
         <button
-          key={i}
+          key={data.key}
           type="button"
-          className="harmony-dot"
-          style={{ ...pos(dh, s), ['--dot' as string]: hsbToHex(dh, s, b) }}
-          aria-label={`Select harmony color ${hsbToHex(dh, s, b)}`}
+          className={`wheel-dot${data.selected ? ' selected' : ''}`}
+          style={{ ...style({ x, y }), ['--dot' as string]: data.hex }}
+          aria-label={`Select color ${data.hex}`}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onPickDot(i)}
+          onClick={() => onPickDot(data.key)}
         />
       ))}
-      <div className="marker" style={{ ...marker, ['--marker' as string]: hex }} />
+      <div className="marker" style={{ ...style(marker), ['--marker' as string]: hex }} />
       {dragging && (
-        <div className={`bubble${bubbleBelow ? ' below' : ''}`} style={marker}>
+        <div className={`bubble${bubbleBelow ? ' below' : ''}`} style={style(marker)}>
           <span className="bubble-swatch" style={{ background: hex }} />
           <span>{hex}</span>
         </div>
