@@ -27,6 +27,15 @@ export function PhotoView({ photo, onPick, onClose, onChoosePhoto }: Props) {
   const [inPhoto, setInPhoto] = useState(false)
   const [loupePos, setLoupePos] = useState({ x: 0, y: 0 })
   const [hex, setHex] = useState('')
+  // Whether the loupe sits above or below the finger, decided once when a
+  // drag starts and held for the rest of that drag. Not recomputed on every
+  // move: right at the boundary, ordinary touch coordinate noise between the
+  // pointerdown and the next pointermove could otherwise flip it, making the
+  // loupe visibly jump from one side of the finger to the other for no
+  // reason the finger actually moved. Both prior photo bugs were reported
+  // while picking colors near the top of a photo - exactly where this
+  // boundary sits - which is what made it noticeable.
+  const [above, setAbove] = useState(true)
   // The canvas's own rendered size, computed from the wrapper's box the same
   // way `object-fit: contain` would, then applied as the canvas's actual CSS
   // size and centered by the flex wrapper. Not done with `object-fit` on the
@@ -76,7 +85,7 @@ export function PhotoView({ photo, onPick, onClose, onChoosePhoto }: Props) {
     ctx.drawImage(photo.canvas, x - half, y - half, LOUPE_SAMPLE, LOUPE_SAMPLE, 0, 0, LOUPE_SIZE, LOUPE_SIZE)
   }
 
-  const update = (e: PointerEvent) => {
+  const update = (e: PointerEvent, isStart = false) => {
     const canvas = canvasRef.current
     const data = imageDataRef.current
     if (!canvas || !data) return
@@ -89,6 +98,7 @@ export function PhotoView({ photo, onPick, onClose, onChoosePhoto }: Props) {
     // and hide the loupe rather than sampling the nearest edge pixel.
     setInPhoto(inBounds)
     if (!inBounds) return
+    if (isStart) setAbove(e.clientY - LOUPE_OFFSET - LOUPE_SIZE > 0)
     const { r, g, b } = average3x3(data.data, photo.width, photo.height, x, y)
     const nextHex = rgbToHex(r, g, b)
     lastHex.current = nextHex
@@ -100,7 +110,7 @@ export function PhotoView({ photo, onPick, onClose, onChoosePhoto }: Props) {
   const onDown = (e: PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId)
     setDragging(true)
-    update(e)
+    update(e, true)
   }
   const onMove = (e: PointerEvent) => {
     if (dragging) update(e)
@@ -120,7 +130,6 @@ export function PhotoView({ photo, onPick, onClose, onChoosePhoto }: Props) {
   const vh = typeof window === 'undefined' ? 0 : window.innerHeight
   const half = LOUPE_SIZE / 2
   const left = Math.min(vw - LOUPE_MARGIN - half, Math.max(LOUPE_MARGIN + half, loupePos.x))
-  const above = loupePos.y - LOUPE_OFFSET - LOUPE_SIZE > 0
   const rawTop = above ? loupePos.y - LOUPE_OFFSET - LOUPE_SIZE : loupePos.y + LOUPE_OFFSET
   const top = Math.min(vh - LOUPE_MARGIN - LOUPE_SIZE, Math.max(LOUPE_MARGIN, rawTop))
 
