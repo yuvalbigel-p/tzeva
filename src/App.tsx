@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { harmonies, hexToHsbKeepHue, hsbToHex, parseHex, rgbToHsb } from './color'
 import { copyText } from './copy'
+import { loadPhoto, type Photo } from './loadPhoto'
 import { loadPalette, savePalette } from './palette'
 import { INITIAL_STATE, type State } from './state'
 import { ColorWheel } from './components/ColorWheel'
@@ -9,6 +10,8 @@ import { HarmonyPicker, HarmonyRows } from './components/HarmonyPanel'
 import { HexField } from './components/HexField'
 import { HsbSliders } from './components/HsbSliders'
 import { PaletteTab } from './components/PaletteTab'
+import { PhotoIcon } from './components/icons'
+import { PhotoView } from './components/PhotoView'
 import { Segmented } from './components/Segmented'
 import { SettingsPopover } from './components/SettingsPopover'
 import { WheelMarker, type WheelDot } from './components/WheelMarker'
@@ -22,6 +25,11 @@ export default function App() {
   const [palette, setPalette] = useState<string[]>(() => loadPalette())
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef(0)
+  // The loaded photo stays in memory for the session only; opening/closing the
+  // view is separate so reopening the photo button shows the same photo again.
+  const [photo, setPhoto] = useState<Photo | null>(null)
+  const [photoOpen, setPhotoOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -92,8 +100,36 @@ export default function App() {
     else if (view === 'palette') selectHex(key as string)
   }
 
+  const onPhotoButton = () => {
+    if (photo) setPhotoOpen(true)
+    else fileInputRef.current?.click()
+  }
+  const onFileChosen = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // lets choosing the same file again still fire onChange
+    if (!file) return
+    setPhoto(await loadPhoto(file))
+    setPhotoOpen(true)
+  }
+
   return (
     <div className="app">
+      <button
+        type="button"
+        className="icon-btn photo-entry-btn"
+        aria-label="Pick a color from a photo"
+        onClick={onPhotoButton}
+      >
+        <PhotoIcon />
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={onFileChosen}
+      />
+
       <SettingsPopover
         mode={st.mode}
         wheel={st.wheel}
@@ -157,6 +193,15 @@ export default function App() {
         <div className="toast" role="status">
           {toast}
         </div>
+      )}
+
+      {photoOpen && photo && (
+        <PhotoView
+          photo={photo}
+          onPick={selectHex}
+          onClose={() => setPhotoOpen(false)}
+          onChoosePhoto={() => fileInputRef.current?.click()}
+        />
       )}
     </div>
   )
