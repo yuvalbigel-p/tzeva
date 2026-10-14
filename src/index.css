@@ -74,7 +74,7 @@ input {
   border-radius: 50%;
   border: 3px solid #fff;
   background: var(--marker);
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1.5px #000, 0 2px 6px rgba(0, 0, 0, 0.5);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -95,10 +95,12 @@ input {
   border-radius: 50%;
   border: 2px solid #fff;
   background: var(--dot);
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55);
+  /* Opaque, not translucent: a translucent ring tints toward the wheel behind it and
+     can blend into a dark fill (e.g. a dark brown dot on the wheel's orange band). */
+  box-shadow: 0 0 0 1.5px #000;
 }
 .wheel-dot.selected::after {
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 1.5px #000, 0 0 0 4px rgba(255, 255, 255, 0.4);
 }
 .bubble {
   position: absolute;
@@ -275,7 +277,7 @@ input[type='range']::-webkit-slider-thumb {
   border-radius: 50%;
   border: 3px solid #fff;
   background: transparent;
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 2px 5px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1.5px #000, 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 input[type='range']::-moz-range-thumb {
   width: 22px;
@@ -283,7 +285,7 @@ input[type='range']::-moz-range-thumb {
   border-radius: 50%;
   border: 3px solid #fff;
   background: transparent;
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 2px 5px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1.5px #000, 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 /* Bottom */
