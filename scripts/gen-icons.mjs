@@ -4,9 +4,10 @@
 // The gradient wheel is rendered by the app's own drawWheel() (src/wheelRender.ts,
 // bundled with esbuild and run in headless Chrome against a real <canvas>), so the
 // icon is pixel-for-pixel the same wheel the app draws — not a re-derived
-// approximation. "Tzeva" is converted from the Pacifico font to real vector paths
-// with opentype.js, so the generated PNGs don't depend on any font being
-// installed on the machine that renders them.
+// approximation, just darkened a bit (see WHEEL_BRIGHTNESS) so the white wordmark
+// still reads clearly even in grayscale. "Tzeva" is converted from the Poppins
+// ExtraBold font to real vector paths with opentype.js, so the generated PNGs
+// don't depend on any font being installed on the machine that renders them.
 //
 // Usage: node scripts/gen-icons.mjs
 //
@@ -30,9 +31,9 @@ const ICON = 512 // viewBox units for both master SVGs
 const BG = '#1e1e1e'
 const WHEEL_PX = 1024 // bitmap resolution for the embedded wheel, downscaled when rasterized
 const WHEEL_R = 200 // wheel radius, in icon units
+const WHEEL_BRIGHTNESS = 0.72 // < 1: darkens the wheel so the white wordmark stays clear in grayscale
 const TEXT_WIDTH = 0.85 * (2 * WHEEL_R) // "fills most of the wheel's width"
-const OUTLINE = ICON * 0.025 // ~2.5% of icon width
-const FONT_FILE = path('node_modules/@fontsource/satisfy/files/satisfy-latin-400-normal.woff')
+const FONT_FILE = path('node_modules/@fontsource/poppins/files/poppins-latin-800-normal.woff')
 
 function findChrome() {
   const candidates = [
@@ -73,21 +74,16 @@ async function renderWheelPng(browser, bundleCode) {
   await page.setViewport({ width: WHEEL_PX, height: WHEEL_PX })
   await page.setContent(`<canvas id="c" width="${WHEEL_PX}" height="${WHEEL_PX}"></canvas>`)
   await page.addScriptTag({ content: bundleCode })
-  await page.evaluate(() => {
+  await page.evaluate((brightness) => {
     const canvas = document.getElementById('c')
-    // mode 'gradient', wheel 'rgb', brightness 1 - matches the app's default wheel.
-    window.TzevaWheel.drawWheel(canvas, 1, 'gradient', 'rgb', '#1e1e1e')
-  })
+    window.TzevaWheel.drawWheel(canvas, brightness, 'gradient', 'rgb', '#1e1e1e')
+  }, WHEEL_BRIGHTNESS)
   const png = await (await page.$('#c')).screenshot({ omitBackground: true })
   await page.close()
   return png
 }
 
-/**
- * "Tzeva" as two stacked SVG path elements (stroke-only behind, fill-only on top) -
- * the same visual effect as paint-order:stroke, but not dependent on the rasterizer
- * supporting that property. Scaled to TEXT_WIDTH and centered at (0,0).
- */
+/** "Tzeva" as a single solid-white SVG path, scaled to TEXT_WIDTH and centered at (0,0). */
 function textPaths() {
   const fontBuf = readFileSync(FONT_FILE)
   const font = opentype.parse(new Uint8Array(fontBuf).buffer)
@@ -98,9 +94,7 @@ function textPaths() {
   const cx = (bbox.x1 + bbox.x2) / 2
   const cy = (bbox.y1 + bbox.y2) / 2
   const d = probe.toPathData(2)
-  const transform = `scale(${scale}) translate(${-cx} ${-cy})`
-  return `<g transform="${transform}">
-    <path d="${d}" fill="none" stroke="${BG}" stroke-width="${(OUTLINE / scale).toFixed(2)}" stroke-linejoin="round" />
+  return `<g transform="scale(${scale}) translate(${-cx} ${-cy})">
     <path d="${d}" fill="#fff" />
   </g>`
 }

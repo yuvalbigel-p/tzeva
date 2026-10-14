@@ -175,13 +175,13 @@ The app ships as a static site on GitHub Pages and installs via Safari's Add to 
 | Piece | Purpose |
 | --- | --- |
 | `manifest.json` | Name and short name "Tzeva", theme color, `"display": "standalone"` so it opens without Safari bars, and orientation locked to portrait |
-| `apple-touch-icon` (180×180 PNG) | Home-screen icon on iOS: the app's own gradient color wheel (no marker), with "Tzeva" centered over it in a script typeface, on the dark neutral gray background |
+| `apple-touch-icon` (180×180 PNG) | Home-screen icon on iOS: the app's own gradient color wheel (no marker, darkened slightly so the wordmark stays clear in grayscale), with "Tzeva" in a bold sans-serif centered over it, on the dark neutral gray background |
 | `<meta name="viewport" ... viewport-fit=cover>` | Full-screen layout that respects safe areas |
 | Service worker | Caches all files after the first visit so the app opens instantly and works offline |
 
 The `vite-plugin-pwa` plugin generates the manifest and service worker from config.
 
-**Icon generation:** the source is kept as SVG (`assets/icon.svg`, plus a padded `assets/icon-maskable.svg` for the maskable manifest icon), not just as PNGs. `scripts/gen-icons.mjs` rasterizes it to `apple-touch-icon.png` (180×180), `icon-192.png`, `icon-512.png` and `icon-maskable-512.png`. The gradient wheel in the icon is produced by running the app's own `drawWheel()` in headless Chrome (not a redrawn approximation), so it's pixel-for-pixel the app's wheel. "Tzeva" is converted from a bundled script font to vector paths (with an outline drawn behind the fill), so the generated PNGs don't depend on any font being installed on the machine that renders them.
+**Icon generation:** the source is kept as SVG (`assets/icon.svg`, plus a padded `assets/icon-maskable.svg` for the maskable manifest icon), not just as PNGs. `scripts/gen-icons.mjs` rasterizes it to `apple-touch-icon.png` (180×180), `icon-192.png`, `icon-512.png` and `icon-maskable-512.png`. The gradient wheel in the icon is produced by running the app's own `drawWheel()` in headless Chrome (not a redrawn approximation), darkened a bit from the app's own wheel so the wordmark stays legible even in grayscale. "Tzeva" is converted from a bundled bold sans-serif font to vector paths, so the generated PNGs don't depend on any font being installed on the machine that renders them.
 
 **Install on iPhone:** open the URL in Safari, tap Share, then Add to Home Screen.
 
