@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { harmonies, hexToHsbKeepHue, hsbToHex, parseHex, rgbToHsb } from './color'
 import { copyText } from './copy'
+import { loadPalette, savePalette } from './palette'
 import { INITIAL_STATE, type State } from './state'
 import { ColorWheel } from './components/ColorWheel'
 import { HarmonyPicker, HarmonyRows } from './components/HarmonyPanel'
@@ -17,14 +18,19 @@ type View = 'sliders' | 'harmonies' | 'palette'
 export default function App() {
   const [st, setSt] = useState<State>(INITIAL_STATE)
   const [view, setView] = useState<View>('sliders')
-  // Session only for now: Part 2 makes this persist across reloads.
-  const [palette, setPalette] = useState<string[]>([])
+  // Persisted to localStorage (see palette.ts); loaded once on mount.
+  const [palette, setPalette] = useState<string[]>(() => loadPalette())
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef(0)
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW()
+
+  // Auto-saves on every change: add, delete or (future) reorder.
+  useEffect(() => {
+    savePalette(palette)
+  }, [palette])
 
   const hex = hsbToHex(st.h, st.s, st.b)
   const hues = harmonies(st.h, st.harmony, st.wheel)
