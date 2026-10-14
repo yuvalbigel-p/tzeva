@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { average3x3, downscaleSize, screenToImage } from './photoColor'
+import { average3x3, containRect, downscaleSize, screenToImage } from './photoColor'
 
 describe('downscaleSize', () => {
   it('leaves an already-small size unchanged', () => {
@@ -66,36 +66,87 @@ describe('average3x3', () => {
   })
 })
 
+describe('containRect', () => {
+  it('fits a landscape photo into a portrait screen by width, leaving vertical bars', () => {
+    // 1200x1600 photo (0.75 ratio) into a 390x844 screen: width-constrained.
+    const r = containRect(390, 844, 1200, 1600)
+    expect(r.width).toBeCloseTo(390, 5)
+    expect(r.height).toBeCloseTo(520, 0)
+    expect(r.height).toBeLessThan(844) // top/bottom bars remain
+  })
+
+  it('fits a portrait photo into a portrait screen by height, leaving side bars', () => {
+    // 600x1600 photo (narrower than the screen's own ratio) into 390x844: height-constrained.
+    const r = containRect(390, 844, 600, 1600)
+    expect(r.height).toBeCloseTo(844, 5)
+    expect(r.width).toBeCloseTo(316.5, 0)
+    expect(r.width).toBeLessThan(390) // left/right bars remain
+  })
+})
+
 describe('screenToImage', () => {
   it('maps 1:1 when the image exactly fills the container', () => {
     const rect = { left: 0, top: 0, width: 200, height: 100 }
-    expect(screenToImage(50, 25, rect, 200, 100)).toEqual({ x: 50, y: 25 })
-    expect(screenToImage(0, 0, rect, 200, 100)).toEqual({ x: 0, y: 0 })
+    expect(screenToImage(50, 25, rect, 200, 100)).toEqual({ x: 50, y: 25, inBounds: true })
+    expect(screenToImage(0, 0, rect, 200, 100)).toEqual({ x: 0, y: 0, inBounds: true })
   })
 
   it('accounts for pillarboxing (container wider than the image)', () => {
     const rect = { left: 0, top: 0, width: 300, height: 100 }
     // 100x100 image at scale 1, centered: occupies x in [100, 200].
-    expect(screenToImage(150, 50, rect, 100, 100)).toEqual({ x: 50, y: 50 })
-    expect(screenToImage(100, 0, rect, 100, 100)).toEqual({ x: 0, y: 0 })
+    expect(screenToImage(150, 50, rect, 100, 100)).toEqual({ x: 50, y: 50, inBounds: true })
+    expect(screenToImage(100, 0, rect, 100, 100)).toEqual({ x: 0, y: 0, inBounds: true })
   })
 
-  it('clamps points that land in the letterbox margin', () => {
+  it('clamps points that land in the letterbox margin, and flags them out of bounds', () => {
     const rect = { left: 0, top: 0, width: 300, height: 100 }
-    expect(screenToImage(0, 50, rect, 100, 100)).toEqual({ x: 0, y: 50 })
-    expect(screenToImage(300, 50, rect, 100, 100)).toEqual({ x: 99, y: 50 })
+    expect(screenToImage(0, 50, rect, 100, 100)).toEqual({ x: 0, y: 50, inBounds: false })
+    expect(screenToImage(300, 50, rect, 100, 100)).toEqual({ x: 99, y: 50, inBounds: false })
   })
 
   it('accounts for letterboxing (container taller than the image)', () => {
     const rect = { left: 0, top: 0, width: 100, height: 300 }
     // 100x50 image at scale 1, centered: occupies y in [125, 175].
-    expect(screenToImage(50, 125, rect, 100, 50)).toEqual({ x: 50, y: 0 })
-    expect(screenToImage(50, 0, rect, 100, 50)).toEqual({ x: 50, y: 0 })
-    expect(screenToImage(50, 299, rect, 100, 50)).toEqual({ x: 50, y: 49 })
+    expect(screenToImage(50, 125, rect, 100, 50)).toEqual({ x: 50, y: 0, inBounds: true })
+    expect(screenToImage(50, 0, rect, 100, 50)).toEqual({ x: 50, y: 0, inBounds: false })
+    expect(screenToImage(50, 299, rect, 100, 50)).toEqual({ x: 50, y: 49, inBounds: false })
   })
 
   it("accounts for the container's own offset on the page", () => {
     const rect = { left: 50, top: 20, width: 200, height: 100 }
-    expect(screenToImage(150, 70, rect, 200, 100)).toEqual({ x: 100, y: 50 })
+    expect(screenToImage(150, 70, rect, 200, 100)).toEqual({ x: 100, y: 50, inBounds: true })
+  })
+
+  it('maps a landscape photo letterboxed top/bottom on a portrait screen', () => {
+    // Same scenario as containRect's landscape-on-portrait case, worked through
+    // screenToImage directly: 1200x1600 image, 390x844 screen.
+    const rect = { left: 0, top: 0, width: 390, height: 844 }
+    // scale = 390/1200 = 0.325, displayedH = 520, offsetY = (844-520)/2 = 162.
+    // A touch at the very top of the *displayed* photo (y = offsetY) maps to row 0.
+    expect(screenToImage(195, 162, rect, 1200, 1600)).toEqual({ x: 600, y: 0, inBounds: true })
+    // A touch just above that, still inside the container rect, is in the top bar.
+    expect(screenToImage(195, 100, rect, 1200, 1600)).toMatchObject({ inBounds: false })
+    // A touch at the bottom of the displayed photo maps to the last row.
+    expect(screenToImage(195, 162 + 520 - 1, rect, 1200, 1600)).toMatchObject({
+      y: 1597,
+      inBounds: true,
+    })
+  })
+
+  it('maps a portrait photo letterboxed left/right on a portrait screen', () => {
+    // 600x1600 image, 390x844 screen: scale = 844/1600 = 0.5275, displayedW ≈ 316.5,
+    // offsetX ≈ (390-316.5)/2 ≈ 36.75.
+    const rect = { left: 0, top: 0, width: 390, height: 844 }
+    expect(screenToImage(37, 422, rect, 600, 1600)).toMatchObject({ x: 0, inBounds: true })
+    // A touch in the left letterbox bar, clearly left of the displayed photo.
+    expect(screenToImage(10, 422, rect, 600, 1600)).toMatchObject({ inBounds: false })
+    // A touch in the right letterbox bar.
+    expect(screenToImage(380, 422, rect, 600, 1600)).toMatchObject({ inBounds: false })
+  })
+
+  it('flags a touch in the letterbox bar as out of bounds so callers can ignore it', () => {
+    const rect = { left: 0, top: 0, width: 100, height: 300 }
+    const { inBounds } = screenToImage(50, 10, rect, 100, 50)
+    expect(inBounds).toBe(false)
   })
 })

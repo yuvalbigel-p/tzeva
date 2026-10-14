@@ -97,7 +97,8 @@ In RYB mode, harmony offsets are applied to the RYB angle, then converted back t
 
 - `downscaleSize(width, height, maxSide)` → `{width, height}`: scales down so the longest side is at most `maxSide` (2048 in the app), preserving aspect ratio; never upscales.
 - `average3x3(data, width, height, x, y)` → `{r, g, b}`: averages the 3×3 pixel block centered on `(x, y)`; neighbors past an edge are clamped to the nearest edge pixel rather than skipped, so a corner pixel still averages 9 samples, some repeated.
-- `screenToImage(clientX, clientY, rect, imgWidth, imgHeight)` → `{x, y}`: maps a screen point to an image pixel, for an image shown in `rect` with `object-fit: contain` (scaled to fit, centered, letterboxed); a point in the letterbox margin, or otherwise outside the image, clamps to the nearest edge pixel.
+- `containRect(containerWidth, containerHeight, imgWidth, imgHeight)` → `{width, height}`: the size an image renders at inside a container with `object-fit: contain` (scaled to fit, preserving aspect ratio). Used to size the photo canvas itself in CSS pixels rather than trusting the browser's own `object-fit` handling of a `<canvas>`, which is inconsistent across engines; the canvas is then centered by its flex wrapper.
+- `screenToImage(clientX, clientY, rect, imgWidth, imgHeight)` → `{x, y, inBounds}`: maps a screen point to an image pixel, for an image shown in `rect` with `object-fit: contain` (scaled to fit, centered, letterboxed). `inBounds` is false for a point in the letterbox margin or otherwise outside the image; `x`/`y` are still clamped to the nearest edge pixel as a fallback, but the photo view checks `inBounds` to avoid sampling, and to hide the loupe, while the finger is off the photo (e.g. dragged into the margin with the pointer still captured).
 
 ## UI layout and interaction
 
@@ -119,9 +120,9 @@ Brightness can only be changed in the Sliders view. This is intentional.
 
 Opened by the photo icon (F8), over the main screen rather than as a tab, since it's a brief picking flow rather than a place to linger.
 
-1. The photo fills the screen (`object-fit: contain`) on the dark neutral background, oriented per its EXIF data.
+1. The photo fills the screen, scaled to fit like `object-fit: contain` would, on the dark neutral background, oriented per its EXIF data. The displayed size is computed in JS (`containRect`) and applied directly to the canvas element rather than relying on the CSS `object-fit` property on a `<canvas>`, which engines handle inconsistently; a flex wrapper centers it.
 2. A close button and a "choose a different photo" button sit in the top corners over the photo.
-3. Touch and drag anywhere on the photo shows the loupe above the finger (or below, flipped, near the top edge — the same flip the wheel's drag-preview bubble uses — and clamped so it never runs off any screen edge), live-updating as the finger moves. Lifting the finger picks the color under the crosshair and closes the view.
+3. Touch and drag anywhere on the photo shows the loupe above the finger (or below, flipped, near the top edge — the same flip the wheel's drag-preview bubble uses — and clamped so it never runs off any screen edge), live-updating as the finger moves. Dragging off the photo into the letterbox margin (pointer capture keeps delivering move events even once the finger leaves the canvas) hides the loupe and samples nothing until the finger returns to the photo. Lifting the finger picks the color under the crosshair and closes the view.
 
 **Interaction details**
 
@@ -231,6 +232,7 @@ The `vite-plugin-pwa` plugin generates the manifest and service worker from conf
 - [ ] Lifting the finger on the photo sets the marker, sliders and hex to that color, closes the photo view, and does not add it to the palette
 - [ ] Reopening the photo icon after picking a color shows the same photo again, without re-opening the system picker
 - [ ] A very large photo (e.g. a modern iPhone's full-resolution shot) opens without error, downscaled so its longest side is at most 2048 px
+- [ ] When the photo is letterboxed (its aspect ratio doesn't match the screen's), the loupe's hex always matches the pixel under the crosshair, including near the letterboxed edges; dragging into the empty margin hides the loupe instead of sampling the nearest edge pixel
 
 ## Milestones
 
