@@ -374,6 +374,14 @@ input[type='range']::-moz-range-thumb {
   gap: 10px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* overflow-y: auto computes overflow-x to auto too, so this becomes a clipping
+     box on every side. Without room to spare, it clips the selected row's white
+     box-shadow ring on whichever edges the row sits flush against (the first row's
+     top, and every row's left, since the swatch has no left inset). Give the
+     shadow room with padding, then cancel the shift with a matching negative
+     margin so the list still lines up with the other tabs. */
+  padding: 4px;
+  margin: -4px;
 }
 .palette-empty {
   margin: 24px 0 0;
